@@ -13,16 +13,20 @@ const ACCENT = {
   bg: "#0c1222",
   muted: "#64748b",
   text: "#e2e8f0",
+  editable: "#38bdf8",
 };
 
-function InputBox({ label, value, onChange, prefix = "₹", step = 100 }) {
+function InputBox({ label, value, onChange, prefix = "₹", step = 100, editableColor }) {
+  const isEditable = !!onChange && editableColor;
+  const labelColor = isEditable ? editableColor : ACCENT.muted;
+  const valueColor = isEditable ? editableColor : ACCENT.text;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      <label style={{ fontSize: 11, color: ACCENT.muted, fontFamily: "IBM Plex Mono, monospace" }}>
+      <label style={{ fontSize: 11, color: labelColor, fontFamily: "IBM Plex Mono, monospace" }}>
         {label}
       </label>
-      <div style={{ display: "flex", alignItems: "center", background: ACCENT.card, border: `1px solid ${ACCENT.border}`, borderRadius: 6, overflow: "hidden" }}>
-        <span style={{ padding: "6px 10px", color: ACCENT.muted, fontSize: 12, fontFamily: "IBM Plex Mono, monospace" }}>
+      <div style={{ display: "flex", alignItems: "center", background: ACCENT.card, border: `1px solid ${isEditable ? editableColor : ACCENT.border}`, borderRadius: 6, overflow: "hidden" }}>
+        <span style={{ padding: "6px 10px", color: labelColor, fontSize: 12, fontFamily: "IBM Plex Mono, monospace" }}>
           {prefix}
         </span>
         <input
@@ -30,13 +34,23 @@ function InputBox({ label, value, onChange, prefix = "₹", step = 100 }) {
           value={value}
           onChange={onChange}
           step={step}
+          readOnly={!onChange}
           style={{
             background: "transparent", border: "none", outline: "none",
-            color: ACCENT.text, fontSize: 13, fontFamily: "IBM Plex Mono, monospace",
-            padding: "6px 10px", width: "100%"
+            color: valueColor, fontSize: 13, fontFamily: "IBM Plex Mono, monospace",
+            padding: "6px 10px", width: "100%", cursor: onChange ? "text" : "default"
           }}
         />
       </div>
+    </div>
+  );
+}
+
+function EditRow({ label, value, prefix = "₹", readOnly }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <label style={{ fontSize: 11, color: ACCENT.muted, fontFamily: "IBM Plex Mono, monospace" }}>{label}</label>
+      <div style={{ fontSize: 13, fontFamily: "IBM Plex Mono, monospace", color: ACCENT.text }}>{prefix}{typeof value === "number" ? Math.round(value).toLocaleString("en-IN") : value}</div>
     </div>
   );
 }
@@ -158,7 +172,6 @@ function ProductionPhaseRows({ fob, logistics, cha, landedPortUSD, landedPortINR
 export default function EVDealModeller() {
   const [tab, setTab] = useState(0);
   const [persona, setPersona] = useState("oem");
-  const [showInputs, setShowInputs] = useState(false);
   const [p, setP] = useState({
     usdInr: 92,
     fob: 130,
@@ -238,12 +251,15 @@ export default function EVDealModeller() {
     { label: "Current Math", sublabel: "Money Multiplier", index: 0 },
     { label: "Leasing Model", sublabel: "3-Phase Revenue", index: 1 },
     { label: "OEM Sale", sublabel: "Direct B2B", index: 2 },
+    { label: "Edit", sublabel: "Core values", index: 3 },
   ];
   const tabs = persona === "importer" ? allTabs.filter((t) => t.index !== 0) : allTabs;
 
   useEffect(() => {
     if (persona === "importer" && tab === 0) setTab(1);
   }, [persona]);
+
+  const canEditCoreValues = persona === "oem";
 
   const personaColor = persona === "oem" ? ACCENT.oem : ACCENT.importer;
 
@@ -301,41 +317,12 @@ export default function EVDealModeller() {
         </div>
       </div>
 
-      {/* Base inputs — collapsible */}
-      <div style={{ background: ACCENT.card, borderBottom: `1px solid ${ACCENT.border}`, padding: "0 28px" }}>
-        <button
-          onClick={() => setShowInputs(!showInputs)}
-          style={{
-            width: "100%",
-            padding: "12px 0",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            background: "none",
-            border: "none",
-            color: ACCENT.muted,
-            fontSize: 11,
-            fontFamily: "IBM Plex Mono, monospace",
-            cursor: "pointer",
-          }}
-        >
-          <span>Assumptions: Landed port {fmt(c.landedPortINR)} → Factory landing {fmt(c.factoryLanding)}</span>
-          <span style={{ fontSize: 14 }}>{showInputs ? "−" : "+"}</span>
-        </button>
-        {showInputs && (
-          <div style={{ paddingBottom: 14 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 10 }}>
-              <InputBox label="USD / INR" value={p.usdInr} onChange={set("usdInr")} prefix="₹" step={0.5} />
-              <InputBox label="Vehicle FOB" value={p.fob} onChange={set("fob")} prefix="$" step={5} />
-              <InputBox label="Logistics" value={p.logistics} onChange={set("logistics")} prefix="$" step={5} />
-              <InputBox label="CHA + CR" value={p.cha} onChange={set("cha")} prefix="$" step={5} />
-              <InputBox label="Transport to Factory" value={p.transportFactory} onChange={set("transportFactory")} prefix="₹" step={100} />
-              <InputBox label="Indian Components" value={p.indianComponents} onChange={set("indianComponents")} prefix="₹" step={100} />
-              <InputBox label="Consumables" value={p.consumables} onChange={set("consumables")} prefix="₹" step={100} />
-              <InputBox label="Assembly Cost" value={p.assembly} onChange={set("assembly")} prefix="₹" step={100} />
-            </div>
-          </div>
-        )}
+      {/* Summary — all editing in Edit tab (OEM only) */}
+      <div style={{ background: ACCENT.card, borderBottom: `1px solid ${ACCENT.border}`, padding: "10px 28px" }}>
+        <div style={{ fontSize: 11, color: ACCENT.muted, fontFamily: "IBM Plex Mono, monospace" }}>
+          Landed port {fmt(c.landedPortINR)} → Factory landing {fmt(c.factoryLanding)}
+          {canEditCoreValues && <span style={{ marginLeft: 12, color: ACCENT.editable }}>Edit core values in Edit tab</span>}
+        </div>
       </div>
 
       {/* Tabs — Importer sees only Leasing + OEM Sale (no Money Multiplier) */}
@@ -526,6 +513,77 @@ export default function EVDealModeller() {
                     { label: "Your margin", value: fmt(c.importerMarginAmt), highlight: true },
                   ]}
             />
+          </div>
+        )}
+
+        {/* ──────── TAB 3: EDIT (core values) — editable only for OEM ──────── */}
+        {tab === 3 && (
+          <div style={{ maxWidth: 560 }}>
+            <div style={{ marginBottom: 16, fontSize: 12, color: canEditCoreValues ? ACCENT.editable : ACCENT.muted, fontFamily: "IBM Plex Mono, monospace" }}>
+              {canEditCoreValues ? "Core values (editable). Changes apply to all models." : "Core values (read-only). Set by OEM in Edit tab."}
+            </div>
+            <FlowSection title="Production inputs" explainer="Base cost parameters used in every model." accentColor={canEditCoreValues ? ACCENT.editable : ACCENT.muted}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 12 }}>
+                {canEditCoreValues ? (
+                  <>
+                    <InputBox label="USD / INR" value={p.usdInr} onChange={set("usdInr")} prefix="₹" step={0.5} editableColor={ACCENT.editable} />
+                    <InputBox label="Vehicle FOB" value={p.fob} onChange={set("fob")} prefix="$" step={5} editableColor={ACCENT.editable} />
+                    <InputBox label="Logistics" value={p.logistics} onChange={set("logistics")} prefix="$" step={5} editableColor={ACCENT.editable} />
+                    <InputBox label="CHA + CR" value={p.cha} onChange={set("cha")} prefix="$" step={5} editableColor={ACCENT.editable} />
+                    <InputBox label="Transport to Factory" value={p.transportFactory} onChange={set("transportFactory")} prefix="₹" step={100} editableColor={ACCENT.editable} />
+                    <InputBox label="Indian Components" value={p.indianComponents} onChange={set("indianComponents")} prefix="₹" step={100} editableColor={ACCENT.editable} />
+                    <InputBox label="Consumables" value={p.consumables} onChange={set("consumables")} prefix="₹" step={100} editableColor={ACCENT.editable} />
+                    <InputBox label="Assembly Cost" value={p.assembly} onChange={set("assembly")} prefix="₹" step={100} editableColor={ACCENT.editable} />
+                  </>
+                ) : (
+                  <>
+                    <EditRow label="USD / INR" value={p.usdInr} prefix="₹" readOnly />
+                    <EditRow label="Vehicle FOB" value={p.fob} prefix="$" readOnly />
+                    <EditRow label="Logistics" value={p.logistics} prefix="$" readOnly />
+                    <EditRow label="CHA + CR" value={p.cha} prefix="$" readOnly />
+                    <EditRow label="Transport to Factory" value={p.transportFactory} prefix="₹" readOnly />
+                    <EditRow label="Indian Components" value={p.indianComponents} prefix="₹" readOnly />
+                    <EditRow label="Consumables" value={p.consumables} prefix="₹" readOnly />
+                    <EditRow label="Assembly Cost" value={p.assembly} prefix="₹" readOnly />
+                  </>
+                )}
+              </div>
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${ACCENT.border}` }}>
+                <Row label="Landed port (INR)" value={fmt(c.landedPortINR)} type="sub" />
+                <Row label="Factory landing" value={fmt(c.factoryLanding)} type="total" personaColor={personaColor} />
+              </div>
+            </FlowSection>
+            <FlowSection title="Model-specific inputs" explainer="Used in Current Math, Leasing, or OEM Sale." accentColor={canEditCoreValues ? ACCENT.editable : ACCENT.muted}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 12 }}>
+                {canEditCoreValues ? (
+                  <>
+                    <InputBox label="MM rate %" value={p.mmRate} onChange={set("mmRate")} prefix="" step={0.5} editableColor={ACCENT.editable} />
+                    <InputBox label="Transport (dealer)" value={p.transportDealer} onChange={set("transportDealer")} prefix="₹" step={100} editableColor={ACCENT.editable} />
+                    <InputBox label="Dealer margin" value={p.dealerMargin} onChange={set("dealerMargin")} prefix="₹" step={500} editableColor={ACCENT.editable} />
+                    <InputBox label="Margin to Mfg" value={p.mfgMargin} onChange={set("mfgMargin")} prefix="₹" step={100} editableColor={ACCENT.editable} />
+                    <InputBox label="Insurance & RTO" value={p.actualInsuranceRTO} onChange={set("actualInsuranceRTO")} prefix="₹" step={100} editableColor={ACCENT.editable} />
+                    <InputBox label="Sun Dock" value={p.sundock} onChange={set("sundock")} prefix="₹" step={100} editableColor={ACCENT.editable} />
+                    <InputBox label="Deposit" value={p.deposit} onChange={set("deposit")} prefix="₹" step={100} editableColor={ACCENT.editable} />
+                    <InputBox label="Monthly Rent" value={p.monthlyRentLeasingCo} onChange={set("monthlyRentLeasingCo")} prefix="₹" step={50} editableColor={ACCENT.editable} />
+                    <InputBox label="Tenure (mo)" value={p.tenure} onChange={set("tenure")} prefix="" step={1} editableColor={ACCENT.editable} />
+                    <InputBox label="Importer margin %" value={p.importerMargin10pct} onChange={set("importerMargin10pct")} prefix="" step={1} editableColor={ACCENT.editable} />
+                  </>
+                ) : (
+                  <>
+                    <EditRow label="MM rate %" value={p.mmRate} prefix="" readOnly />
+                    <EditRow label="Transport (dealer)" value={p.transportDealer} prefix="₹" readOnly />
+                    <EditRow label="Dealer margin" value={p.dealerMargin} prefix="₹" readOnly />
+                    <EditRow label="Margin to Mfg" value={p.mfgMargin} prefix="₹" readOnly />
+                    <EditRow label="Insurance & RTO" value={p.actualInsuranceRTO} prefix="₹" readOnly />
+                    <EditRow label="Sun Dock" value={p.sundock} prefix="₹" readOnly />
+                    <EditRow label="Deposit" value={p.deposit} prefix="₹" readOnly />
+                    <EditRow label="Monthly Rent" value={p.monthlyRentLeasingCo} prefix="₹" readOnly />
+                    <EditRow label="Tenure (mo)" value={p.tenure} prefix="" readOnly />
+                    <EditRow label="Importer margin %" value={p.importerMargin10pct} prefix="" readOnly />
+                  </>
+                )}
+              </div>
+            </FlowSection>
           </div>
         )}
 

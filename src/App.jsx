@@ -1,23 +1,28 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 
 const fmt = (n) => "₹" + Math.round(n).toLocaleString("en-IN");
 const fmtUSD = (n) => "$" + Math.round(n).toLocaleString("en-IN");
 const pct = (n) => n.toFixed(1) + "%";
 
-const STAGE_COLORS = {
-  0: { bg: "#1a2744", accent: "#4f8ef7", label: "STAGE 1 — OEM PITCH" },
-  1: { bg: "#1a2d1a", accent: "#4ecb71", label: "STAGE 2 — LEASING MODEL" },
-  2: { bg: "#2d1a2d", accent: "#c87de8", label: "STAGE 2 — OEM MODEL" },
+const ACCENT = {
+  oem: "#2563eb",
+  importer: "#0d9488",
+  sf: "#b45309",
+  border: "#1e2a3a",
+  card: "#111827",
+  bg: "#0c1222",
+  muted: "#64748b",
+  text: "#e2e8f0",
 };
 
 function InputBox({ label, value, onChange, prefix = "₹", step = 100 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      <label style={{ fontSize: 10, color: "#8899aa", textTransform: "uppercase", letterSpacing: 1, fontFamily: "IBM Plex Mono, monospace" }}>
+      <label style={{ fontSize: 11, color: ACCENT.muted, fontFamily: "IBM Plex Mono, monospace" }}>
         {label}
       </label>
-      <div style={{ display: "flex", alignItems: "center", background: "#0d1117", border: "1px solid #2a3548", borderRadius: 6, overflow: "hidden" }}>
-        <span style={{ padding: "4px 8px", color: "#4f8ef7", fontSize: 12, fontFamily: "IBM Plex Mono, monospace", background: "#111827" }}>
+      <div style={{ display: "flex", alignItems: "center", background: ACCENT.card, border: `1px solid ${ACCENT.border}`, borderRadius: 6, overflow: "hidden" }}>
+        <span style={{ padding: "6px 10px", color: ACCENT.muted, fontSize: 12, fontFamily: "IBM Plex Mono, monospace" }}>
           {prefix}
         </span>
         <input
@@ -27,8 +32,8 @@ function InputBox({ label, value, onChange, prefix = "₹", step = 100 }) {
           step={step}
           style={{
             background: "transparent", border: "none", outline: "none",
-            color: "#e2e8f0", fontSize: 13, fontFamily: "IBM Plex Mono, monospace",
-            padding: "4px 8px", width: "100%"
+            color: ACCENT.text, fontSize: 13, fontFamily: "IBM Plex Mono, monospace",
+            padding: "6px 10px", width: "100%"
           }}
         />
       </div>
@@ -36,32 +41,35 @@ function InputBox({ label, value, onChange, prefix = "₹", step = 100 }) {
   );
 }
 
-function Row({ label, value, type = "cost", note = "", indent = false }) {
+function Row({ label, value, type = "cost", note = "", indent = false, personaColor }) {
   const colors = {
     cost: "#94a3b8",
-    sf: "#f59e0b",
-    sub: "#e2e8f0",
-    total: "#4ecb71",
-    header: "#64748b",
-    dim: "#475569",
-    alert: "#f87171",
+    sf: ACCENT.muted,
+    sub: ACCENT.text,
+    total: personaColor || ACCENT.importer,
+    header: ACCENT.muted,
+    dim: "#64748b",
+    alert: "#dc2626",
+    persona: personaColor || ACCENT.oem,
   };
-  const isSF = type === "sf";
+  const isPersona = type === "persona";
+  const isTotal = type === "total";
+  const highlight = isPersona || isTotal;
+  const leftBorder = highlight ? (personaColor || ACCENT.importer) : "transparent";
   return (
     <div style={{
       display: "flex", justifyContent: "space-between", alignItems: "center",
-      padding: "7px 12px",
-      background: isSF ? "rgba(245,158,11,0.08)" : type === "total" ? "rgba(78,203,113,0.08)" : "transparent",
-      borderLeft: isSF ? "3px solid #f59e0b" : type === "total" ? "3px solid #4ecb71" : "3px solid transparent",
+      padding: "8px 12px",
+      background: "transparent",
+      borderLeft: leftBorder !== "transparent" ? `3px solid ${leftBorder}` : "3px solid transparent",
       borderRadius: 4,
       marginLeft: indent ? 16 : 0,
     }}>
       <span style={{ fontSize: 12, color: colors[type] || "#94a3b8", fontFamily: "IBM Plex Mono, monospace", display: "flex", alignItems: "center", gap: 6 }}>
-        {isSF && <span style={{ fontSize: 9, background: "#f59e0b", color: "#000", padding: "1px 4px", borderRadius: 2, fontWeight: 700 }}>SF</span>}
         {label}
-        {note && <span style={{ fontSize: 10, color: "#475569", marginLeft: 6 }}>{note}</span>}
+        {note && <span style={{ fontSize: 10, color: ACCENT.muted, marginLeft: 6 }}>{note}</span>}
       </span>
-      <span style={{ fontSize: 13, fontFamily: "IBM Plex Mono, monospace", color: colors[type] || "#94a3b8", fontWeight: type === "total" || type === "sf" ? 700 : 400 }}>
+      <span style={{ fontSize: 13, fontFamily: "IBM Plex Mono, monospace", color: colors[type] || "#94a3b8", fontWeight: highlight ? 600 : 400 }}>
         {value}
       </span>
     </div>
@@ -71,39 +79,86 @@ function Row({ label, value, type = "cost", note = "", indent = false }) {
 function Divider({ label }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "8px 0" }}>
-      <div style={{ flex: 1, height: 1, background: "#1e293b" }} />
-      {label && <span style={{ fontSize: 9, color: "#334155", textTransform: "uppercase", letterSpacing: 2, fontFamily: "IBM Plex Mono, monospace" }}>{label}</span>}
-      <div style={{ flex: 1, height: 1, background: "#1e293b" }} />
+      <div style={{ flex: 1, height: 1, background: ACCENT.border }} />
+      {label && <span style={{ fontSize: 10, color: ACCENT.muted, fontFamily: "IBM Plex Mono, monospace" }}>{label}</span>}
+      <div style={{ flex: 1, height: 1, background: ACCENT.border }} />
     </div>
   );
 }
 
-function SFSummaryCard({ items, total }) {
+function RevenueMarginCard({ title, items, accentColor }) {
   return (
     <div style={{
-      background: "linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.05))",
-      border: "1px solid rgba(245,158,11,0.3)",
-      borderRadius: 10, padding: "16px 20px", marginTop: 12
+      marginTop: 24,
+      padding: "18px 20px",
+      background: ACCENT.card,
+      border: `1px solid ${ACCENT.border}`,
+      borderRadius: 8,
+      borderLeft: `4px solid ${accentColor}`,
     }}>
-      <div style={{ fontSize: 10, color: "#f59e0b", letterSpacing: 2, textTransform: "uppercase", fontFamily: "IBM Plex Mono, monospace", marginBottom: 10 }}>
-        ◆ Seven Fincorp Revenue Summary
+      <div style={{ fontSize: 12, fontWeight: 600, color: accentColor, fontFamily: "IBM Plex Mono, monospace", marginBottom: 12 }}>
+        {title}
       </div>
       {items.map((item, i) => (
-        <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: i < items.length - 1 ? "1px solid rgba(245,158,11,0.1)" : "none" }}>
-          <span style={{ fontSize: 11, color: "#d4a853", fontFamily: "IBM Plex Mono, monospace" }}>{item.label}</span>
-          <span style={{ fontSize: 12, color: "#f59e0b", fontFamily: "IBM Plex Mono, monospace", fontWeight: 600 }}>{item.value}</span>
+        <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: i < items.length - 1 ? `1px solid ${ACCENT.border}` : "none" }}>
+          <span style={{ fontSize: 12, color: ACCENT.muted, fontFamily: "IBM Plex Mono, monospace" }}>{item.label}</span>
+          <span style={{ fontSize: 13, fontFamily: "IBM Plex Mono, monospace", color: item.highlight ? accentColor : ACCENT.text, fontWeight: item.highlight ? 700 : 500 }}>{item.value}</span>
         </div>
       ))}
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(245,158,11,0.3)" }}>
-        <span style={{ fontSize: 12, color: "#f59e0b", fontFamily: "IBM Plex Mono, monospace", fontWeight: 700 }}>TOTAL SF MARGIN / VEHICLE</span>
-        <span style={{ fontSize: 16, color: "#f59e0b", fontFamily: "IBM Plex Mono, monospace", fontWeight: 700 }}>{total}</span>
+    </div>
+  );
+}
+
+function Hero({ title, value, subtitle, accentColor }) {
+  return (
+    <div style={{
+      marginBottom: 24,
+      padding: "20px 24px",
+      background: ACCENT.card,
+      border: `1px solid ${ACCENT.border}`,
+      borderRadius: 8,
+      borderLeft: `4px solid ${accentColor}`,
+    }}>
+      <div style={{ fontSize: 12, color: ACCENT.muted, fontFamily: "IBM Plex Mono, monospace", marginBottom: 4 }}>{title}</div>
+      <div style={{ fontSize: 28, fontWeight: 700, color: accentColor, fontFamily: "IBM Plex Mono, monospace", letterSpacing: -0.5 }}>{value}</div>
+      {subtitle && <div style={{ fontSize: 11, color: ACCENT.muted, fontFamily: "IBM Plex Mono, monospace", marginTop: 6, lineHeight: 1.4 }}>{subtitle}</div>}
+    </div>
+  );
+}
+
+function FlowSection({ title, explainer, children, accentColor }) {
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: accentColor, fontFamily: "IBM Plex Mono, monospace", marginBottom: 4 }}>{title}</div>
+      {explainer && <div style={{ fontSize: 11, color: ACCENT.muted, marginBottom: 10, lineHeight: 1.4 }}>{explainer}</div>}
+      <div style={{ background: ACCENT.card, borderRadius: 8, padding: "12px 16px", border: `1px solid ${ACCENT.border}` }}>
+        {children}
       </div>
     </div>
+  );
+}
+
+function ProductionPhaseRows({ fob, logistics, cha, landedPortUSD, landedPortINR, usdInr, transportFactory, indianComponents, consumables, assembly, factoryLanding, personaColor }) {
+  return (
+    <>
+      <Row label="Vehicle FOB" value={fmtUSD(fob)} type="dim" />
+      <Row label="Logistics" value={fmtUSD(logistics)} type="dim" />
+      <Row label="CHA + currency R" value={fmtUSD(cha)} type="dim" />
+      <Row label="Landed PORT" value={fmtUSD(landedPortUSD)} type="sub" />
+      <Row label="Landed PORT" value={fmt(landedPortINR)} type="sub" note={`INR @ ₹${usdInr}/USD`} />
+      <Row label="Transport" value={fmt(transportFactory)} type="dim" indent />
+      <Row label="Indian Components" value={fmt(indianComponents)} type="dim" indent />
+      <Row label="Consumables" value={fmt(consumables)} type="dim" indent />
+      <Row label="Assembly cost" value={fmt(assembly)} type="dim" indent />
+      <Row label="Factory Landing" value={fmt(factoryLanding)} type="total" personaColor={personaColor} />
+    </>
   );
 }
 
 export default function EVDealModeller() {
   const [tab, setTab] = useState(0);
+  const [persona, setPersona] = useState("oem");
+  const [showInputs, setShowInputs] = useState(false);
   const [p, setP] = useState({
     usdInr: 92,
     fob: 130,
@@ -179,80 +234,125 @@ export default function EVDealModeller() {
     };
   }, [p]);
 
-  const tabs = [
-    { label: "Current Math", sublabel: "Money Multiplier" },
-    { label: "Leasing Model", sublabel: "3-Phase Revenue" },
-    { label: "OEM Sale", sublabel: "Direct B2B" },
+  const allTabs = [
+    { label: "Current Math", sublabel: "Money Multiplier", index: 0 },
+    { label: "Leasing Model", sublabel: "3-Phase Revenue", index: 1 },
+    { label: "OEM Sale", sublabel: "Direct B2B", index: 2 },
   ];
+  const tabs = persona === "importer" ? allTabs.filter((t) => t.index !== 0) : allTabs;
 
-  const stages = ["Stage 1", "Stage 2", "Stage 2"];
+  useEffect(() => {
+    if (persona === "importer" && tab === 0) setTab(1);
+  }, [persona]);
+
+  const personaColor = persona === "oem" ? ACCENT.oem : ACCENT.importer;
 
   return (
     <div style={{
       minHeight: "100vh",
-      background: "#080d18",
+      background: ACCENT.bg,
       fontFamily: "'Syne', sans-serif",
-      color: "#e2e8f0",
+      color: ACCENT.text,
       padding: "0 0 40px 0",
     }}>
-      <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+      <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Syne:wght@400;600;700&display=swap" rel="stylesheet" />
 
       {/* Header */}
-      <div style={{ background: "linear-gradient(180deg, #0f1829 0%, #080d18 100%)", borderBottom: "1px solid #1e293b", padding: "16px 28px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ background: ACCENT.card, borderBottom: `1px solid ${ACCENT.border}`, padding: "16px 28px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <div>
-          <div style={{ fontSize: 11, color: "#4f8ef7", letterSpacing: 3, textTransform: "uppercase", fontFamily: "IBM Plex Mono, monospace", marginBottom: 2 }}>Seven Fincorp</div>
-          <div style={{ fontSize: 20, fontWeight: 800, color: "#f1f5f9", letterSpacing: -0.5 }}>EV Import Deal Modeller</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: ACCENT.text }}>EV Deal Modeller</div>
         </div>
-        <div style={{
-          background: tab === 0 ? "rgba(79,142,247,0.15)" : "rgba(78,203,113,0.15)",
-          border: `1px solid ${tab === 0 ? "#4f8ef7" : "#4ecb71"}`,
-          borderRadius: 20, padding: "5px 14px",
-          fontSize: 11, fontFamily: "IBM Plex Mono, monospace",
-          color: tab === 0 ? "#4f8ef7" : "#4ecb71",
-          letterSpacing: 1,
-        }}>
-          {stages[tab]}
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 11, color: ACCENT.muted, fontFamily: "IBM Plex Mono, monospace" }}>View as</span>
+            <div style={{ display: "flex", background: ACCENT.bg, borderRadius: 6, border: `1px solid ${ACCENT.border}`, overflow: "hidden" }}>
+              <button
+                onClick={() => setPersona("oem")}
+                style={{
+                  padding: "6px 14px",
+                  fontSize: 12,
+                  fontFamily: "IBM Plex Mono, monospace",
+                  fontWeight: persona === "oem" ? 600 : 400,
+                  color: persona === "oem" ? "#fff" : ACCENT.muted,
+                  background: persona === "oem" ? ACCENT.oem : "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                OEM
+              </button>
+              <button
+                onClick={() => setPersona("importer")}
+                style={{
+                  padding: "6px 14px",
+                  fontSize: 12,
+                  fontFamily: "IBM Plex Mono, monospace",
+                  fontWeight: persona === "importer" ? 600 : 400,
+                  color: persona === "importer" ? "#fff" : ACCENT.muted,
+                  background: persona === "importer" ? ACCENT.importer : "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                Importer
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Base Inputs */}
-      <div style={{ background: "#0d1117", borderBottom: "1px solid #1e293b", padding: "14px 28px" }}>
-        <div style={{ fontSize: 9, color: "#334155", letterSpacing: 3, textTransform: "uppercase", fontFamily: "IBM Plex Mono, monospace", marginBottom: 10 }}>Base Cost Parameters — Edit to Confirm with OEM</div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 10 }}>
-          <InputBox label="USD / INR" value={p.usdInr} onChange={set("usdInr")} prefix="₹" step={0.5} />
-          <InputBox label="Vehicle FOB" value={p.fob} onChange={set("fob")} prefix="$" step={5} />
-          <InputBox label="Logistics" value={p.logistics} onChange={set("logistics")} prefix="$" step={5} />
-          <InputBox label="CHA + CR" value={p.cha} onChange={set("cha")} prefix="$" step={5} />
-          <InputBox label="Transport to Factory" value={p.transportFactory} onChange={set("transportFactory")} prefix="₹" step={100} />
-          <InputBox label="Indian Components" value={p.indianComponents} onChange={set("indianComponents")} prefix="₹" step={100} />
-          <InputBox label="Consumables" value={p.consumables} onChange={set("consumables")} prefix="₹" step={100} />
-          <InputBox label="Assembly Cost" value={p.assembly} onChange={set("assembly")} prefix="₹" step={100} />
-        </div>
-        {/* Factory Landing display */}
-        <div style={{ marginTop: 10, padding: "8px 12px", background: "#111827", borderRadius: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: 11, color: "#64748b", fontFamily: "IBM Plex Mono, monospace" }}>
-            Landed Port (USD) = {fmtUSD(c.landedPortUSD)} → INR {fmt(c.landedPortINR)}
-            <span style={{ marginLeft: 20 }}>Factory Landing Cost =</span>
-          </span>
-          <span style={{ fontSize: 14, fontWeight: 700, color: "#e2e8f0", fontFamily: "IBM Plex Mono, monospace" }}>{fmt(c.factoryLanding)}</span>
-        </div>
+      {/* Base inputs — collapsible */}
+      <div style={{ background: ACCENT.card, borderBottom: `1px solid ${ACCENT.border}`, padding: "0 28px" }}>
+        <button
+          onClick={() => setShowInputs(!showInputs)}
+          style={{
+            width: "100%",
+            padding: "12px 0",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            background: "none",
+            border: "none",
+            color: ACCENT.muted,
+            fontSize: 11,
+            fontFamily: "IBM Plex Mono, monospace",
+            cursor: "pointer",
+          }}
+        >
+          <span>Assumptions: Landed port {fmt(c.landedPortINR)} → Factory landing {fmt(c.factoryLanding)}</span>
+          <span style={{ fontSize: 14 }}>{showInputs ? "−" : "+"}</span>
+        </button>
+        {showInputs && (
+          <div style={{ paddingBottom: 14 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 10 }}>
+              <InputBox label="USD / INR" value={p.usdInr} onChange={set("usdInr")} prefix="₹" step={0.5} />
+              <InputBox label="Vehicle FOB" value={p.fob} onChange={set("fob")} prefix="$" step={5} />
+              <InputBox label="Logistics" value={p.logistics} onChange={set("logistics")} prefix="$" step={5} />
+              <InputBox label="CHA + CR" value={p.cha} onChange={set("cha")} prefix="$" step={5} />
+              <InputBox label="Transport to Factory" value={p.transportFactory} onChange={set("transportFactory")} prefix="₹" step={100} />
+              <InputBox label="Indian Components" value={p.indianComponents} onChange={set("indianComponents")} prefix="₹" step={100} />
+              <InputBox label="Consumables" value={p.consumables} onChange={set("consumables")} prefix="₹" step={100} />
+              <InputBox label="Assembly Cost" value={p.assembly} onChange={set("assembly")} prefix="₹" step={100} />
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: "flex", padding: "0 28px", borderBottom: "1px solid #1e293b", background: "#0a0f1e" }}>
-        {tabs.map((t, i) => (
-          <button key={i} onClick={() => setTab(i)} style={{
-            padding: "14px 24px",
+      {/* Tabs — Importer sees only Leasing + OEM Sale (no Money Multiplier) */}
+      <div style={{ display: "flex", padding: "0 28px", borderBottom: `1px solid ${ACCENT.border}`, background: ACCENT.bg }}>
+        {tabs.map((t) => (
+          <button key={t.index} onClick={() => setTab(t.index)} style={{
+            padding: "12px 20px",
             background: "transparent",
             border: "none",
-            borderBottom: tab === i ? `2px solid ${i === 0 ? "#4f8ef7" : i === 1 ? "#4ecb71" : "#c87de8"}` : "2px solid transparent",
+            borderBottom: tab === t.index ? `2px solid ${personaColor}` : "2px solid transparent",
             cursor: "pointer",
-            color: tab === i ? (i === 0 ? "#4f8ef7" : i === 1 ? "#4ecb71" : "#c87de8") : "#475569",
+            color: tab === t.index ? personaColor : ACCENT.muted,
             fontFamily: "Syne, sans-serif",
-            fontWeight: tab === i ? 700 : 400,
+            fontWeight: tab === t.index ? 600 : 400,
           }}>
             <div style={{ fontSize: 13 }}>{t.label}</div>
-            <div style={{ fontSize: 10, fontFamily: "IBM Plex Mono, monospace", marginTop: 2, opacity: 0.7 }}>{t.sublabel}</div>
+            <div style={{ fontSize: 10, fontFamily: "IBM Plex Mono, monospace", marginTop: 2, opacity: 0.8 }}>{t.sublabel}</div>
           </button>
         ))}
       </div>
@@ -262,216 +362,170 @@ export default function EVDealModeller() {
 
         {/* ──────── TAB 0: CURRENT MATH ──────── */}
         {tab === 0 && (
-          <div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-              {/* Cost Waterfall */}
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#64748b", letterSpacing: 2, textTransform: "uppercase", fontFamily: "IBM Plex Mono, monospace", marginBottom: 12 }}>Cost Waterfall</div>
-                <div style={{ background: "#0d1117", borderRadius: 10, padding: 12, border: "1px solid #1e293b" }}>
-                  <Row label="Vehicle FOB" value={fmtUSD(p.fob)} type="dim" />
-                  <Row label="Logistics" value={fmtUSD(p.logistics)} type="dim" />
-                  <Row label="CHA + Currency Risk" value={fmtUSD(p.cha)} type="dim" />
-                  <Row label="Landed Port (USD)" value={fmtUSD(c.landedPortUSD)} type="sub" />
-                  <Row label={`Landed Port @ ₹${p.usdInr}/USD`} value={fmt(c.landedPortINR)} type="sub" />
-                  <Divider label="India processing" />
-                  <Row label="Transport to Factory" value={fmt(p.transportFactory)} type="dim" indent />
-                  <Row label="Indian Components" value={fmt(p.indianComponents)} type="dim" indent />
-                  <Row label="Consumables" value={fmt(p.consumables)} type="dim" indent />
-                  <Row label="Assembly Cost" value={fmt(p.assembly)} type="dim" indent />
-                  <Row label="Factory Landing" value={fmt(c.factoryLanding)} type="total" />
-                </div>
+          <div style={{ maxWidth: 560 }}>
+            <FlowSection title="Production phase" explainer="Cost line-by-line to factory landing, then interest." accentColor={personaColor}>
+              <ProductionPhaseRows
+                fob={p.fob}
+                logistics={p.logistics}
+                cha={p.cha}
+                landedPortUSD={c.landedPortUSD}
+                landedPortINR={c.landedPortINR}
+                usdInr={p.usdInr}
+                transportFactory={p.transportFactory}
+                indianComponents={p.indianComponents}
+                consumables={p.consumables}
+                assembly={p.assembly}
+                factoryLanding={c.factoryLanding}
+                personaColor={personaColor}
+              />
+              <Divider />
+              <Row label="Interest" value={fmt(c.mmInterest)} type="dim" note={`${p.mmRate}% 45D`} />
+              <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 10, color: ACCENT.muted }}>MM rate %</span>
+                <input type="number" value={p.mmRate} onChange={set("mmRate")} step={0.5} style={{ width: 48, background: ACCENT.bg, border: `1px solid ${ACCENT.border}`, borderRadius: 4, color: ACCENT.text, fontSize: 12, padding: "4px 6px", outline: "none", textAlign: "center" }} />
               </div>
+            </FlowSection>
 
-              {/* Money Multiplier + Sale */}
-              <div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: "#64748b", letterSpacing: 2, textTransform: "uppercase", fontFamily: "IBM Plex Mono, monospace" }}>Money Multiplier + Sale Chain</span>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ fontSize: 10, color: "#f59e0b", fontFamily: "IBM Plex Mono, monospace" }}>MM Rate</span>
-                    <input type="number" value={p.mmRate} onChange={set("mmRate")} step={0.5} style={{
-                      width: 50, background: "#111827", border: "1px solid #f59e0b44",
-                      borderRadius: 4, color: "#f59e0b", fontSize: 13, fontFamily: "IBM Plex Mono, monospace",
-                      padding: "3px 6px", outline: "none", textAlign: "center"
-                    }} />
-                    <span style={{ fontSize: 10, color: "#f59e0b", fontFamily: "IBM Plex Mono, monospace" }}>%</span>
-                  </div>
-                </div>
-                <div style={{ background: "#0d1117", borderRadius: 10, padding: 12, border: "1px solid #1e293b" }}>
-                  <Row label="Factory Landing" value={fmt(c.factoryLanding)} type="sub" />
-                  <Row
-                    label={`Interest @ ${p.mmRate}% on Landed Port`}
-                    value={fmt(c.mmInterest)}
-                    type="sf"
-                    note="45 days"
-                  />
-                  <Row label="CP to OEM" value={fmt(c.cpToFactory)} type="sub" />
-                  <Divider label="Dealer chain" />
-                  <Row label="GST @ 5%" value={fmt(c.gst1)} type="dim" indent />
-                  <Row label="Transport to Dealer" value={fmt(p.transportDealer)} type="dim" indent />
-                  <Row label="Dealer Margin" value={fmt(p.dealerMargin)} type="dim" indent />
-                  <Row label="Final Sale Price" value={fmt(c.salePrice1)} type="total" />
-                </div>
-
-                {/* Editable dealer fields */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 10 }}>
-                  <InputBox label="Transport to Dealer" value={p.transportDealer} onChange={set("transportDealer")} prefix="₹" step={100} />
-                  <InputBox label="Dealer Margin" value={p.dealerMargin} onChange={set("dealerMargin")} prefix="₹" step={500} />
-                </div>
+            <FlowSection title="Distribution phase" explainer="CP to factory, GST, transport, dealer margin → sale price." accentColor={personaColor}>
+              <Row label="CP to Factory" value={fmt(c.cpToFactory)} type="sub" />
+              <Row label="GST" value={fmt(c.gst1)} type="dim" indent />
+              <Row label="Transport" value={fmt(p.transportDealer)} type="dim" indent />
+              <Row label="Dealer margin" value={fmt(p.dealerMargin)} type="dim" indent />
+              <Row label="Sale price" value={fmt(c.salePrice1)} type="total" personaColor={personaColor} />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 10 }}>
+                <InputBox label="Transport" value={p.transportDealer} onChange={set("transportDealer")} prefix="₹" step={100} />
+                <InputBox label="Dealer margin" value={p.dealerMargin} onChange={set("dealerMargin")} prefix="₹" step={500} />
               </div>
-            </div>
+            </FlowSection>
 
-            <SFSummaryCard
+            <RevenueMarginCard
+              title="Revenue and margin — Current Math (OEM)"
+              accentColor={personaColor}
               items={[
-                { label: `Interest on Landed Port @ ${p.mmRate}%`, value: fmt(c.mmInterest) },
+                { label: "Your cost price", value: fmt(c.cpToFactory) },
+                { label: "Your revenue (sale price)", value: fmt(c.salePrice1), highlight: true },
+                { label: "Your margin", value: fmt(c.salePrice1 - c.cpToFactory), highlight: true },
               ]}
-              total={fmt(c.mmInterest)}
             />
-
-            <div style={{ marginTop: 14, padding: "10px 16px", background: "rgba(79,142,247,0.06)", border: "1px solid rgba(79,142,247,0.2)", borderRadius: 8 }}>
-              <div style={{ fontSize: 11, color: "#4f8ef7", fontFamily: "IBM Plex Mono, monospace" }}>
-                ◎ Pitch note for tomorrow — OEM uses Seven Fincorp's Money Multiplier for working capital to purchase CKD kits from the importer. SF earns the interest margin. Confirm FOB, logistics & CHA numbers directly with OEM.
-              </div>
-            </div>
           </div>
         )}
 
-        {/* ──────── TAB 1: LEASING MODEL ──────── */}
+        {/* ──────── TAB 1: LEASING MODEL (Sale to Leasing Company) ──────── */}
         {tab === 1 && (
-          <div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div style={{ maxWidth: 560 }}>
+            <FlowSection title="Production phase" explainer="Cost line-by-line to factory landing, then margin to MFG → sale price to leasing co." accentColor={personaColor}>
+              <ProductionPhaseRows
+                fob={p.fob}
+                logistics={p.logistics}
+                cha={p.cha}
+                landedPortUSD={c.landedPortUSD}
+                landedPortINR={c.landedPortINR}
+                usdInr={p.usdInr}
+                transportFactory={p.transportFactory}
+                indianComponents={p.indianComponents}
+                consumables={p.consumables}
+                assembly={p.assembly}
+                factoryLanding={c.factoryLanding}
+                personaColor={personaColor}
+              />
+              <Divider />
+              <Row label="Margin to Mfg" value={fmt(p.mfgMargin)} type="dim" />
+              <Row label="Sale price" value={fmt(c.salePriceToLeasingCo)} type="total" personaColor={personaColor} note="to leasing co" />
+              <div style={{ marginTop: 8 }}>
+                <InputBox label="Margin to Mfg" value={p.mfgMargin} onChange={set("mfgMargin")} prefix="₹" step={100} />
+              </div>
+            </FlowSection>
 
-              {/* PRODUCTION PHASE */}
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#4ecb71", letterSpacing: 3, textTransform: "uppercase", fontFamily: "IBM Plex Mono, monospace", marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ background: "#4ecb71", color: "#000", borderRadius: 3, padding: "1px 6px", fontSize: 9 }}>01</span>
-                  Production Phase
-                </div>
-                <div style={{ background: "#0d1117", borderRadius: 10, padding: 12, border: "1px solid #1e293b" }}>
-                  <Row label="Factory Landing (OEM cost)" value={fmt(c.factoryLanding)} type="sub" />
-                  <Row label="2% Fee on Vehicle Purchase" value={fmt(c.sfFee_2pct)} type="sf" note="charged to OEM" />
-                  <Row label="10% of Importer Advance" value={fmt(c.sfFee_10pct)} type="sf" note="via OEM" />
-                  <Divider />
-                  <Row label="Margin to MFG" value={fmt(p.mfgMargin)} type="dim" />
-                  <Row label="Sale Price → Leasing Co" value={fmt(c.salePriceToLeasingCo)} type="sub" />
-                </div>
-                <div style={{ marginTop: 8 }}>
-                  <InputBox label="Advance Billed by OEM to Importer" value={p.advanceFromImporter} onChange={set("advanceFromImporter")} prefix="₹" step={5000} />
-                </div>
-                <div style={{ marginTop: 6 }}>
-                  <InputBox label="MFG Margin per Vehicle" value={p.mfgMargin} onChange={set("mfgMargin")} prefix="₹" step={100} />
-                </div>
+            <FlowSection title="Distribution phase" explainer="Transport, GST, Insurance & RTO, on-road, sun dock." accentColor={personaColor}>
+              <Row label="Transport" value={fmt(p.transportDealer)} type="dim" />
+              <Row label="GST" value={fmt(c.gst2)} type="dim" />
+              <Row label="Insurance & RTO" value={fmt(c.totalInsuranceRTO)} type="dim" />
+              <Row label="On Road Price" value={fmt(c.onRoad)} type="sub" />
+              <Row label="Sun Dock" value={fmt(p.sundock)} type="dim" />
+              <Row label="Total asset cost" value={fmt(c.totalAssetCost)} type="total" personaColor={personaColor} note="leasing co" />
+              <div style={{ marginTop: 8 }}>
+                <InputBox label="Insurance & RTO" value={p.actualInsuranceRTO} onChange={set("actualInsuranceRTO")} prefix="₹" step={100} />
               </div>
+            </FlowSection>
 
-              {/* DISTRIBUTION PHASE */}
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#4ecb71", letterSpacing: 3, textTransform: "uppercase", fontFamily: "IBM Plex Mono, monospace", marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ background: "#4ecb71", color: "#000", borderRadius: 3, padding: "1px 6px", fontSize: 9 }}>02</span>
-                  Distribution Phase
-                </div>
-                <div style={{ background: "#0d1117", borderRadius: 10, padding: 12, border: "1px solid #1e293b" }}>
-                  <Row label="Sale Price to Leasing Co" value={fmt(c.salePriceToLeasingCo)} type="sub" />
-                  <Row label="GST @ 5%" value={fmt(c.gst2)} type="dim" />
-                  <Row label="Transport" value={fmt(p.transportDealer)} type="dim" />
-                  <Row label="Actual Insurance + RTO" value={fmt(p.actualInsuranceRTO)} type="dim" />
-                  <Row label="SF: Reg + RTO Service Fee" value={fmt(c.sfDistributionFee)} type="sf" note="billed to leasing co" />
-                  <Row label="Total Ins/RTO (incl SF fee)" value={fmt(c.totalInsuranceRTO)} type="sub" />
-                  <Row label="On-Road Price" value={fmt(c.onRoad)} type="sub" />
-                  <Row label="Sun Dock" value={fmt(p.sundock)} type="dim" />
-                  <Row label="Total Asset Cost (Leasing Co)" value={fmt(c.totalAssetCost)} type="total" />
-                </div>
-                <div style={{ marginTop: 8 }}>
-                  <InputBox label="Actual Insurance + RTO (excl SF)" value={p.actualInsuranceRTO} onChange={set("actualInsuranceRTO")} prefix="₹" step={100} />
-                </div>
-              </div>
-            </div>
-
-            {/* REVENUE PHASE */}
-            <div style={{ marginTop: 16 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#4ecb71", letterSpacing: 3, textTransform: "uppercase", fontFamily: "IBM Plex Mono, monospace", marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ background: "#4ecb71", color: "#000", borderRadius: 3, padding: "1px 6px", fontSize: 9 }}>03</span>
-                Revenue Phase — Rental Economics
-              </div>
-              <div style={{ background: "#0d1117", borderRadius: 10, padding: 12, border: "1px solid #1e293b", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
-                <div>
-                  <Row label="Deposit from Customer" value={fmt(p.deposit)} type="dim" />
-                  <Row label="SF Bills Customer / Month" value={fmt(p.monthlyRentCustomer)} type="sf" />
-                  <Row label="SF Pays Leasing Co / Month" value={fmt(p.monthlyRentLeasingCo)} type="dim" />
-                  <Row label={`SF Net / Month`} value={fmt(c.sfPerMonth)} type="sf" note={`× ${p.tenure} mo`} />
-                  <Row label={`SF Rental Revenue (${p.tenure} mo)`} value={fmt(c.sfRentalRevenue)} type="sf" />
-                </div>
-                <div>
-                  <Row label="Tenure" value={`${p.tenure} months`} type="dim" />
-                  <Row label="Total Customer Revenue" value={fmt(c.totalCustomerRevenue)} type="sub" />
-                  <Row label="Leasing Co Receives" value={fmt(c.leasingCoRevenue)} type="dim" />
-                  <Row label="Leasing Co Margin" value={fmt(c.leasingCoMargin)} type={c.leasingCoMargin > 0 ? "total" : "alert"} />
-                  <Row label="Leasing Co ROI" value={pct(c.leasingCoROI * 100)} type={c.leasingCoROI > 0 ? "total" : "alert"} />
-                </div>
-              </div>
-              {/* Editable rent inputs */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginTop: 10 }}>
-                <InputBox label="SF Bills Customer" value={p.monthlyRentCustomer} onChange={set("monthlyRentCustomer")} prefix="₹" step={50} />
-                <InputBox label="SF Pays Leasing Co" value={p.monthlyRentLeasingCo} onChange={set("monthlyRentLeasingCo")} prefix="₹" step={50} />
+            <FlowSection title="Revenue phase (revenue economics)" explainer="Deposit, monthly rent, tenure → total revenue, margin, ROI%." accentColor={personaColor}>
+              <Row label="Deposit" value={fmt(p.deposit)} type="dim" />
+              <Row label="Monthly Rent" value={fmt(p.monthlyRentLeasingCo)} type="dim" />
+              <Row label="Tenure" value={`${p.tenure}`} type="dim" note="months" />
+              <Row label="Total Revenue" value={fmt(c.leasingCoRevenue)} type="total" personaColor={personaColor} note="lease revenue" />
+              <Row label="Margin" value={fmt(c.leasingCoMargin)} type={c.leasingCoMargin >= 0 ? "total" : "alert"} personaColor={personaColor} />
+              <Row label="ROI%" value={pct(c.leasingCoROI * 100)} type={c.leasingCoROI >= 0 ? "sub" : "alert"} />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 10 }}>
+                <InputBox label="Monthly Rent" value={p.monthlyRentLeasingCo} onChange={set("monthlyRentLeasingCo")} prefix="₹" step={50} />
                 <InputBox label="Tenure (months)" value={p.tenure} onChange={set("tenure")} prefix="mo" step={1} />
                 <InputBox label="Deposit" value={p.deposit} onChange={set("deposit")} prefix="₹" step={100} />
               </div>
-            </div>
+            </FlowSection>
 
-            <SFSummaryCard
-              items={[
-                { label: "Production: 2% on vehicle purchase", value: fmt(c.sfFee_2pct) },
-                { label: "Production: 10% of importer advance", value: fmt(c.sfFee_10pct) },
-                { label: "Distribution: Reg + RTO service fee", value: fmt(c.sfDistributionFee) },
-                { label: `Revenue: ₹${Math.round(c.sfPerMonth)}/mo × ${p.tenure}mo`, value: fmt(c.sfRentalRevenue) },
-              ]}
-              total={fmt(c.totalSFRevenue)}
+            <RevenueMarginCard
+              title={`Revenue and margin — Sale to Leasing Co (${persona === "oem" ? "OEM" : "Importer"})`}
+              accentColor={personaColor}
+              items={persona === "oem"
+                ? [
+                    { label: "Your revenue (selling price to leasing co)", value: fmt(c.salePriceToLeasingCo), highlight: true },
+                    { label: "Your cost (factory landing)", value: fmt(c.factoryLanding) },
+                    { label: "Your margin", value: fmt(p.mfgMargin), highlight: true },
+                  ]
+                : [
+                    { label: "Your revenue (lease revenue)", value: fmt(c.leasingCoRevenue), highlight: true },
+                    { label: "Your cost (total asset cost)", value: fmt(c.totalAssetCost) },
+                    { label: "Your margin", value: fmt(c.leasingCoMargin), highlight: true },
+                  ]}
             />
           </div>
         )}
 
-        {/* ──────── TAB 2: OEM MODEL ──────── */}
+        {/* ──────── TAB 2: OEM MODEL (Sale to OEM Company) ──────── */}
         {tab === 2 && (
-          <div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#64748b", letterSpacing: 2, textTransform: "uppercase", fontFamily: "IBM Plex Mono, monospace", marginBottom: 12 }}>Cost Structure</div>
-                <div style={{ background: "#0d1117", borderRadius: 10, padding: 12, border: "1px solid #1e293b" }}>
-                  <Row label="Landed Port (INR)" value={fmt(c.landedPortINR)} type="sub" />
-                  <Row label="Transport to Factory" value={fmt(p.transportFactory)} type="dim" indent />
-                  <Row label="Indian Components" value={fmt(p.indianComponents)} type="dim" indent />
-                  <Row label="Consumables" value={fmt(p.consumables)} type="dim" indent />
-                  <Row label="Assembly Cost" value={fmt(p.assembly)} type="dim" indent />
-                  <Row label="Factory Landing" value={fmt(c.factoryLanding)} type="sub" />
-                  <Divider />
-                  <Row label={`Importer Margin @ ${p.importerMargin10pct}%`} value={fmt(c.importerMarginAmt)} type="dim" note="on landed port" />
-                  <Row label="Sale Price to OEM" value={fmt(c.salePriceToOEM)} type="total" />
-                </div>
-                <div style={{ marginTop: 8 }}>
-                  <InputBox label="Importer Margin %" value={p.importerMargin10pct} onChange={set("importerMargin10pct")} prefix="%" step={1} />
-                </div>
+          <div style={{ maxWidth: 560 }}>
+            <FlowSection title="Production phase" explainer="Cost line-by-line to factory landing, then margin to importer → sale price to OEM." accentColor={personaColor}>
+              <ProductionPhaseRows
+                fob={p.fob}
+                logistics={p.logistics}
+                cha={p.cha}
+                landedPortUSD={c.landedPortUSD}
+                landedPortINR={c.landedPortINR}
+                usdInr={p.usdInr}
+                transportFactory={p.transportFactory}
+                indianComponents={p.indianComponents}
+                consumables={p.consumables}
+                assembly={p.assembly}
+                factoryLanding={c.factoryLanding}
+                personaColor={personaColor}
+              />
+              <Divider />
+              <Row label="Margin to importer" value={fmt(c.importerMarginAmt)} type="dim" note={`${p.importerMargin10pct}% on landed port`} />
+              <Row label="Sale price" value={fmt(c.salePriceToOEM)} type="total" personaColor={personaColor} note="to OEM" />
+              <div style={{ marginTop: 8 }}>
+                <InputBox label="Margin to importer %" value={p.importerMargin10pct} onChange={set("importerMargin10pct")} prefix="%" step={1} />
               </div>
+            </FlowSection>
 
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#64748b", letterSpacing: 2, textTransform: "uppercase", fontFamily: "IBM Plex Mono, monospace", marginBottom: 12 }}>SF Revenue Model</div>
-                <div style={{ background: "#0d1117", borderRadius: 10, padding: 20, border: "1px solid #2a1f40", display: "flex", flexDirection: "column", gap: 12 }}>
-                  <div style={{ fontSize: 11, color: "#c87de8", fontFamily: "IBM Plex Mono, monospace", letterSpacing: 1 }}>
-                    Distribution & revenue handled by manufacturer
-                  </div>
-                  <div style={{ fontSize: 12, color: "#475569", fontFamily: "IBM Plex Mono, monospace", lineHeight: 1.8 }}>
-                    Revenue model to be structured in Stage 2 discussions after OEM meeting outcome.
-                    <br /><br />
-                    Possible angles:<br />
-                    — Invoice discounting on OEM's receivables<br />
-                    — Distributor credit line via MM<br />
-                    — Volume-based arrangement fee
-                  </div>
-                </div>
-                <div style={{ marginTop: 10, padding: "10px 14px", background: "rgba(200,125,232,0.06)", border: "1px solid rgba(200,125,232,0.2)", borderRadius: 8 }}>
-                  <div style={{ fontSize: 11, color: "#c87de8", fontFamily: "IBM Plex Mono, monospace" }}>
-                    ◎ Finalise this model after OEM feedback on Stage 1 and Stage 2 pitches.
-                  </div>
-                </div>
+            <FlowSection title="Distribution phase" explainer="Distribution and revenue handled by manufacturer." accentColor={personaColor}>
+              <div style={{ padding: "12px 0", fontSize: 12, color: ACCENT.muted, fontFamily: "IBM Plex Mono, monospace" }}>
+                Distribution and revenue handled by manufacturer.
               </div>
-            </div>
+            </FlowSection>
+
+            <RevenueMarginCard
+              title={`Revenue and margin — Sale to OEM Co (${persona === "oem" ? "OEM" : "Importer"})`}
+              accentColor={personaColor}
+              items={persona === "oem"
+                ? [
+                    { label: "Your cost (purchase price)", value: fmt(c.salePriceToOEM), highlight: true },
+                    { label: "Margin", value: "—", highlight: false },
+                  ]
+                : [
+                    { label: "Your revenue (sale to OEM)", value: fmt(c.salePriceToOEM), highlight: true },
+                    { label: "Your cost (factory landing)", value: fmt(c.factoryLanding) },
+                    { label: "Your margin", value: fmt(c.importerMarginAmt), highlight: true },
+                  ]}
+            />
           </div>
         )}
 
